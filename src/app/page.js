@@ -37,7 +37,7 @@ export default function Home() {
       style={{ backgroundImage: "url('/laptop.jpg')" }}
     >
       {/* Overlay */}
-      <div className="absolute inset-0 bg-black/60 z-0"></div>
+      <div className="fixed inset-0 bg-black/60 z-0"></div>
 
       {/* Header */}
       <header className="relative z-10 flex flex-wrap justify-between items-center px-4 sm:px-6 py-3 bg-[#0A1B2A]/80 border-b border-gray-700">
