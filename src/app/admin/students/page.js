@@ -14,6 +14,7 @@ import {
 import WelcomeBanner from "../../../../components/welcome.jsx";
 // 💡 Import the student form modal
 import StudentFormModal from "../../../../components/StudentsFormModal.jsx";
+// Helper for formatting currency (using NGN symbol)
 
 // Helper for formatting currency (using NGN symbol)
 const formatCurrency = (amount) => {
@@ -24,18 +25,99 @@ const formatCurrency = (amount) => {
   }).format(amount);
 };
 
+// 💡 UPDATED HELPER COMPONENT: Mobile Card View for Students
+const StudentCard = ({
+  student,
+  handleView,
+  handleEdit,
+  handleDelete,
+  formatCurrency,
+}) => (
+  <div
+    key={student._id}
+    className="bg-white p-4 mb-4 rounded-xl shadow-md border border-gray-200"
+  >
+    <div className="flex justify-between items-center border-b pb-2 mb-2">
+      <h3 className="text-lg font-bold text-gray-800">{student.fullName}</h3>
+      <span className="text-xs font-medium text-gray-500">
+        ID: {student._id.slice(-4)}
+      </span>
+    </div>
+
+    <div className="space-y-1 text-sm">
+      <p>
+        <span className="font-medium text-gray-600">Email:</span>{" "}
+        <span className="text-indigo-600">{student.email}</span>
+      </p>
+      <p>
+        <span className="font-medium text-gray-600">Course:</span>{" "}
+        {student.course}
+      </p>
+      <p className="flex justify-between">
+        <span className="font-medium text-gray-600">Agreed:</span>{" "}
+        <span>{formatCurrency(student.amountAgreed)}</span>
+      </p>
+      <p className="flex justify-between">
+        <span className="font-medium text-gray-600">Paid:</span>{" "}
+        <span className="text-green-600">
+          {formatCurrency(student.firstPayment)}
+        </span>
+      </p>
+      <p className="flex justify-between items-center pt-1 border-t mt-2">
+        <span className="font-bold text-gray-700">Balance:</span>
+        <span
+          className="font-bold"
+          style={{ color: student.balance > 0 ? "#dc2626" : "#10b981" }}
+        >
+          {formatCurrency(student.balance)}
+        </span>
+      </p>
+      <p className="flex justify-between items-center">
+        {/* 💡 Label changed to "Paid" */}
+        <span className="font-bold text-gray-700">Paid:</span>
+        {student.fullyPaid ? (
+          <CheckCircle className="w-5 h-5 text-green-500" />
+        ) : (
+          <XCircle className="w-5 h-5 text-red-400" />
+        )}
+      </p>
+    </div>
+
+    {/* Actions Bar */}
+    <div className="flex justify-end space-x-3 mt-3 border-t pt-2">
+      <button
+        onClick={() => handleView(student)}
+        className="text-gray-500 hover:text-gray-900 flex items-center text-xs"
+      >
+        <Eye className="w-4 h-4 mr-1" /> View
+      </button>
+      <button
+        onClick={() => handleEdit(student)}
+        className="text-indigo-600 hover:text-indigo-900 flex items-center text-xs"
+      >
+        <Edit2 className="w-4 h-4 mr-1" /> Edit
+      </button>
+      <button
+        onClick={() => handleDelete(student._id, student.fullName)}
+        className="text-red-600 hover:text-red-900 flex items-center text-xs"
+      >
+        <Trash2 className="w-4 h-4 mr-1" /> Delete
+      </button>
+    </div>
+  </div>
+);
+
 export default function ViewAllStudentsPage() {
   const [searchTerm, setSearchTerm] = useState("");
   const [students, setStudents] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [statusMessage, setStatusMessage] = useState(null); // For delete/fetch feedback
+  const [statusMessage, setStatusMessage] = useState(null);
 
-  // State for Edit/View Modal
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingStudent, setEditingStudent] = useState(null);
-  const [isReadOnly, setIsReadOnly] = useState(false); // New state to lock form for viewing
+  const [isReadOnly, setIsReadOnly] = useState(false);
 
-  // 💡 Function to fetch student data from API
+  // ... (fetchStudents, handleDelete, handleEdit, handleView, handleCloseModal logic remain the same) ...
   const fetchStudents = useCallback(async () => {
     setIsLoading(true);
     try {
@@ -64,14 +146,11 @@ export default function ViewAllStudentsPage() {
     }
   }, []);
 
-  // Fetch data on initial load
   useEffect(() => {
     fetchStudents();
   }, [fetchStudents]);
 
-  // 💡 ACTION HANDLER: Delete student
   const handleDelete = async (studentId, studentName) => {
-    // NOTE: Authorization check for super-admin role must be done on the backend API
     if (
       !window.confirm(
         `Are you sure you want to delete student: "${studentName}"? This action cannot be undone.`
@@ -81,13 +160,13 @@ export default function ViewAllStudentsPage() {
     }
 
     setStatusMessage({ type: "loading", text: `Deleting ${studentName}...` });
-    const token = localStorage.getItem("authToken"); // Get token for auth header
+    const token = localStorage.getItem("authToken");
 
     try {
       const response = await fetch(`/api/students/${studentId}`, {
         method: "DELETE",
         headers: {
-          Authorization: `Bearer ${token}`, // Send JWT for Super Admin check
+          Authorization: `Bearer ${token}`,
         },
       });
 
@@ -96,7 +175,7 @@ export default function ViewAllStudentsPage() {
           type: "success",
           text: `Success: Student "${studentName}" deleted.`,
         });
-        fetchStudents(); // Refresh the list
+        fetchStudents();
       } else {
         const errorData = await response.json();
         setStatusMessage({
@@ -115,28 +194,24 @@ export default function ViewAllStudentsPage() {
     setTimeout(() => setStatusMessage(null), 4000);
   };
 
-  // 💡 ACTION HANDLER: Opens modal in Edit mode
   const handleEdit = (student) => {
     setEditingStudent(student);
-    setIsReadOnly(false); // Enable editing
+    setIsReadOnly(false);
     setIsModalOpen(true);
   };
 
-  // 💡 ACTION HANDLER: Opens modal in Read-Only mode
   const handleView = (student) => {
     setEditingStudent(student);
-    setIsReadOnly(true); // Disable editing (Read-Only)
+    setIsReadOnly(true);
     setIsModalOpen(true);
   };
 
-  // Handle modal closing and resetting state
   const handleCloseModal = () => {
     setIsModalOpen(false);
     setEditingStudent(null);
-    setIsReadOnly(false); // Reset read-only state
+    setIsReadOnly(false);
   };
 
-  // Filter students based on search term
   const filteredStudents = students.filter(
     (student) =>
       student.fullName.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -144,7 +219,6 @@ export default function ViewAllStudentsPage() {
       String(student._id).includes(searchTerm)
   );
 
-  // Dynamic status message class
   const statusClasses =
     statusMessage?.type === "success"
       ? "bg-green-100 text-green-700"
@@ -159,11 +233,12 @@ export default function ViewAllStudentsPage() {
       {/* Page Header and Add Button */}
       <div className="flex justify-between items-center mb-6 mt-15">
         <h1 className="text-2xl font-bold text-gray-800">STUDENTS</h1>
-        {/* Link to the Register Student page */}
+
+        {/* 💡 Add New Student Button: Text is now always visible */}
         <Link href="/admin/register">
-          <button className="flex items-center space-x-2 px-4 py-2 bg-green-600 text-white font-medium rounded-lg shadow hover:bg-green-700 transition">
+          <button className="flex items-center space-x-2 px-2 py-2 bg-green-600 text-white font-small rounded-lg shadow hover:bg-green-700 transition">
             <Plus className="w-5 h-5" />
-            <span>Add New Student</span>
+            <span>Add New Student</span> {/* 💡 Removed hidden sm:inline */}
           </button>
         </Link>
       </div>
@@ -192,8 +267,12 @@ export default function ViewAllStudentsPage() {
         <Search className="w-5 h-5 text-gray-400 absolute left-3 top-1/2 transform -translate-y-1/2" />
       </div>
 
-      {/* Students Table */}
-      <div className="overflow-x-auto border border-gray-200 rounded-xl">
+      {/* ======================================================= */}
+      {/* Responsive Content Display: Table (Desktop) vs. Card (Mobile) */}
+      {/* ======================================================= */}
+
+      {/* Desktop/Tablet View (sm:block) */}
+      <div className="overflow-x-auto border border-gray-200 rounded-xl hidden sm:block">
         <table className="min-w-full divide-y divide-gray-200">
           <thead className="bg-gray-50">
             <tr>
@@ -203,9 +282,9 @@ export default function ViewAllStudentsPage() {
                 "Email",
                 "Course",
                 "Amount Agreed",
-                "Amount Paid", // 💡 Renamed Header
+                "Amount Paid",
                 "Balance",
-                "Fully Paid",
+                "Paid", // 💡 Updated Header
                 "Action",
               ].map((header) => (
                 <th
@@ -258,7 +337,6 @@ export default function ViewAllStudentsPage() {
                   >
                     {formatCurrency(student.balance)}
                   </td>
-                  {/* 💡 Fully Paid Column */}
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-center">
                     {student.fullyPaid ? (
                       <CheckCircle className="w-5 h-5 text-green-500 mx-auto" />
@@ -266,24 +344,20 @@ export default function ViewAllStudentsPage() {
                       <XCircle className="w-5 h-5 text-red-400 mx-auto" />
                     )}
                   </td>
-                  {/* Action Column */}
                   <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                     <div className="flex space-x-2">
-                      {/* 💡 VIEW Button */}
                       <button
                         onClick={() => handleView(student)}
                         className="text-gray-500 hover:text-gray-900"
                       >
                         <Eye className="w-4 h-4" />
                       </button>
-                      {/* EDIT Button */}
                       <button
                         onClick={() => handleEdit(student)}
                         className="text-indigo-600 hover:text-indigo-900"
                       >
                         <Edit2 className="w-4 h-4" />
                       </button>
-                      {/* DELETE Button */}
                       <button
                         onClick={() =>
                           handleDelete(student._id, student.fullName)
@@ -303,12 +377,38 @@ export default function ViewAllStudentsPage() {
                   className="px-6 py-12 text-center text-gray-500"
                 >
                   <XCircle className="w-6 h-6 mx-auto mb-2 text-red-400" />
-                  No students found matching "{searchTerm}".
+                  No students found matching &quot;{searchTerm}&quot;.
                 </td>
               </tr>
             )}
           </tbody>
         </table>
+      </div>
+
+      {/* Mobile Card View (hidden on sm and above) */}
+      <div className="sm:hidden">
+        {isLoading ? (
+          <div className="py-12 text-center text-gray-500">
+            <Loader2 className="w-6 h-6 animate-spin mx-auto mb-2" />
+            Loading student data ...
+          </div>
+        ) : filteredStudents.length > 0 ? (
+          filteredStudents.map((student) => (
+            <StudentCard
+              key={student._id}
+              student={student}
+              handleView={handleView}
+              handleEdit={handleEdit}
+              handleDelete={handleDelete}
+              formatCurrency={formatCurrency}
+            />
+          ))
+        ) : (
+          <div className="py-12 text-center text-gray-500">
+            <XCircle className="w-6 h-6 mx-auto mb-2 text-red-400" />
+            No students found matching &quot;{searchTerm}&quot;.
+          </div>
+        )}
       </div>
 
       {/* 💡 Render StudentFormModal */}

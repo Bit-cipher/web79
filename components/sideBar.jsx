@@ -1,31 +1,31 @@
 "use client";
 import Link from "next/link";
 import Image from "next/image";
-import { usePathname, useRouter } from 'next/navigation';
-import { useState, useEffect } from 'react';
+import { usePathname, useRouter } from "next/navigation";
+import { useState, useEffect } from "react";
 
-// NOTE: This component MUST receive onOpenCreateAdmin from the parent layout
-export default function Sidebar({ onOpenCreateAdmin }) {
-  const pathname = usePathname(); 
-  const router = useRouter(); 
+// NOTE: This component MUST receive onOpenCreateAdmin and onLinkClick from the parent layout
+export default function Sidebar({ onOpenCreateAdmin, onLinkClick }) {
+  const pathname = usePathname();
+  const router = useRouter();
 
-  const [userRole, setUserRole] = useState(null); 
+  const [userRole, setUserRole] = useState(null);
 
-  // Fetch user role from localStorage on component mount (for future use/display)
+  // Fetch user role from localStorage on component mount
   useEffect(() => {
-    if (typeof window !== 'undefined') {
-      const userData = localStorage.getItem('user');
+    if (typeof window !== "undefined") {
+      const userData = localStorage.getItem("user");
       if (userData) {
         try {
           const user = JSON.parse(userData);
-          setUserRole(user.role); 
+          setUserRole(user.role);
         } catch (e) {
           console.error("Error parsing user data from localStorage", e);
         }
       }
     }
   }, []);
-  
+
   const navItems = [
     { name: "Dashboard", href: "/admin", icon: "🏠" },
     { name: "Register", href: "/admin/register", icon: "➕" },
@@ -41,10 +41,22 @@ export default function Sidebar({ onOpenCreateAdmin }) {
 
   const handleLogout = () => {
     // Clear stored authentication data
-    localStorage.removeItem('authToken');
-    localStorage.removeItem('user');
+    localStorage.removeItem("authToken");
+    localStorage.removeItem("user");
+    // Ensure modal closes and trigger link click for mobile menu close
+    if (onLinkClick) {
+      onLinkClick();
+    }
     // Redirect to login page
-    router.push('/');
+    router.push("/");
+  };
+
+  // Handler for all navigation links
+  const handleNavLinkClick = () => {
+    // 💡 Call the function passed from the layout to close the mobile menu
+    if (onLinkClick) {
+      onLinkClick();
+    }
   };
 
   return (
@@ -72,14 +84,16 @@ export default function Sidebar({ onOpenCreateAdmin }) {
       {/* Navigation Links */}
       <nav className="flex-1 space-y-2 p-4">
         {navItems.map((item) => {
-          const isActive = pathname === item.href; 
+          const isActive = pathname === item.href;
 
           return (
             <Link
               key={item.name}
               href={item.href}
+              // 💡 Attach handler to close menu after navigation
+              onClick={handleNavLinkClick}
               className={`flex items-center px-4 py-3 rounded-lg text-sm font-medium transition-colors ${
-                isActive 
+                isActive
                   ? "bg-indigo-50 text-indigo-700"
                   : "text-gray-600 hover:bg-gray-100 hover:text-indigo-700"
               }`}
@@ -90,22 +104,24 @@ export default function Sidebar({ onOpenCreateAdmin }) {
           );
         })}
       </nav>
-      
+
       {/* Container for Create Admin and Logout */}
       <div className="p-4 border-t border-gray-200">
-        
         {/* Create Admin Button (Visible to all admins) */}
         <button
-            onClick={onOpenCreateAdmin} // Calls the function passed from the layout to open the modal
-            className={`w-full flex items-center px-4 py-3 rounded-lg text-sm font-medium transition-colors 
+          onClick={() => {
+            onOpenCreateAdmin(); // Open the modal
+            handleNavLinkClick(); // Close the sidebar immediately
+          }}
+          className={`w-full flex items-center px-4 py-3 rounded-lg text-sm font-medium transition-colors 
                         text-gray-600 hover:bg-gray-100 hover:text-indigo-700 mb-2`}
         >
           <span className="mr-2">👤</span>
           {adminCreationLink.name}
         </button>
-        
+
         {/* Logout Button */}
-        <button 
+        <button
           onClick={handleLogout}
           className="w-full flex items-center justify-center px-4 py-3 text-sm font-medium text-gray-600 rounded-lg hover:bg-red-50 hover:text-red-600 transition-colors"
         >

@@ -8,6 +8,7 @@ import {
   CheckCircle,
   Loader2,
   Trash2,
+  BookOpen,
 } from "lucide-react";
 // 💡 NOTE: Assuming the modal component has been renamed to CourseFormModal.jsx
 import CourseFormModal from "../../../../components/CreateCourseModal";
@@ -31,6 +32,54 @@ const StatusBadge = ({ status }) => {
   );
 };
 
+// 💡 FINAL FIXED HELPER COMPONENT: Mobile Card View for Courses
+const CourseCard = ({ course, handleEdit, handleDelete }) => (
+  <div
+    key={course._id}
+    className="bg-white p-4 mb-4 rounded-xl shadow-md border border-gray-200"
+  >
+    <div className="flex justify-between items-center border-b pb-2 mb-2">
+      <h3 className="text-lg font-bold text-gray-800 flex items-center">
+        <BookOpen className="w-5 h-5 mr-2 text-indigo-600" />
+        {course.name}
+      </h3>
+      <StatusBadge status={course.status} />
+    </div>
+
+    <div className="space-y-2 text-sm">
+      {/* Display Instructor and Duration using flex for robust spacing */}
+      <p className="flex justify-between">
+        <span className="font-medium text-gray-600">Instructor:</span>
+        <span className="font-semibold text-gray-800">{course.instructor}</span>
+      </p>
+      <p className="flex justify-between">
+        <span className="font-medium text-gray-600">Duration:</span>
+        <span className="font-semibold text-gray-800">{course.duration}</span>
+      </p>
+      <p className="flex justify-between items-center pt-2 border-t mt-2">
+        <span className="font-medium text-gray-600">ID:</span>
+        <span className="text-xs text-gray-500">{course._id.slice(-6)}</span>
+      </p>
+    </div>
+
+    {/* Actions Bar */}
+    <div className="flex justify-end space-x-3 mt-3 border-t pt-2">
+      <button
+        onClick={() => handleEdit(course)}
+        className="text-indigo-600 hover:text-indigo-900 flex items-center text-xs"
+      >
+        <Edit2 className="w-4 h-4 mr-1" /> Edit
+      </button>
+      <button
+        onClick={() => handleDelete(course._id, course.name)}
+        className="text-red-600 hover:text-red-900 flex items-center text-xs"
+      >
+        <Trash2 className="w-4 h-4 mr-1" /> Delete
+      </button>
+    </div>
+  </div>
+);
+
 export default function CoursesPage() {
   const [searchTerm, setSearchTerm] = useState("");
   const [courses, setCourses] = useState([]);
@@ -41,7 +90,7 @@ export default function CoursesPage() {
   const [editingCourse, setEditingCourse] = useState(null);
   const [deleteStatus, setDeleteStatus] = useState(null);
 
-  // Function to fetch data from API
+  // Function to fetch data from API (remains unchanged)
   const fetchCourses = useCallback(async () => {
     setIsLoading(true);
     try {
@@ -78,9 +127,8 @@ export default function CoursesPage() {
     setIsModalOpen(true); // Open the modal
   };
 
-  // 💡 ACTION HANDLER: Delete course
+  // 💡 ACTION HANDLER: Delete course (remains unchanged)
   const handleDelete = async (courseId, courseName) => {
-    // Show confirmation dialog before deletion
     if (
       !window.confirm(
         `Are you sure you want to delete the course: "${courseName}"? This action cannot be undone.`
@@ -110,7 +158,6 @@ export default function CoursesPage() {
       console.error("Delete error:", error);
     }
 
-    // Clear status message after 3 seconds
     setTimeout(() => setDeleteStatus(null), 3000);
   };
 
@@ -134,7 +181,7 @@ export default function CoursesPage() {
           onClick={() => {
             setEditingCourse(null);
             setIsModalOpen(true);
-          }} // Reset editingCourse before opening for creation
+          }}
           className="flex items-center space-x-2 px-4 py-2 bg-indigo-600 text-white font-medium rounded-lg shadow hover:bg-indigo-700 transition"
         >
           <Plus className="w-5 h-5" />
@@ -169,8 +216,12 @@ export default function CoursesPage() {
         <Search className="w-5 h-5 text-gray-400 absolute left-3 top-1/2 transform -translate-y-1/2" />
       </div>
 
-      {/* Courses Table */}
-      <div className="overflow-x-auto border border-gray-200 rounded-xl">
+      {/* ======================================================= */}
+      {/* 💡 Responsive Content Display: Table (Desktop) vs. Card (Mobile) */}
+      {/* ======================================================= */}
+
+      {/* Desktop/Tablet View (sm:block) */}
+      <div className="overflow-x-auto border border-gray-200 rounded-xl hidden sm:block">
         <table className="min-w-full divide-y divide-gray-200">
           <thead className="bg-gray-50">
             <tr>
@@ -224,14 +275,12 @@ export default function CoursesPage() {
                   <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                     <div className="flex space-x-2">
                       <button
-                        // 💡 Pass the entire course object for editing
                         onClick={() => handleEdit(course)}
                         className="text-indigo-600 hover:text-indigo-900"
                       >
                         <Edit2 className="w-4 h-4" />
                       </button>
                       <button
-                        // 💡 Pass ID and Name for deletion
                         onClick={() => handleDelete(course._id, course.name)}
                         className="text-red-600 hover:text-red-900"
                       >
@@ -247,7 +296,8 @@ export default function CoursesPage() {
                   colSpan="6"
                   className="px-6 py-12 text-center text-gray-500"
                 >
-                  No courses found.
+                  <XCircle className="w-6 h-6 mx-auto mb-2 text-red-400" />
+                  No courses found matching &quot;{searchTerm}&quot;.
                 </td>
               </tr>
             )}
@@ -255,12 +305,36 @@ export default function CoursesPage() {
         </table>
       </div>
 
+      {/* Mobile Card View (hidden on sm and above) */}
+      <div className="sm:hidden">
+        {isLoading ? (
+          <div className="py-12 text-center text-gray-500">
+            <Loader2 className="w-6 h-6 animate-spin mx-auto mb-2" />
+            Loading courses ...
+          </div>
+        ) : filteredCourses.length > 0 ? (
+          filteredCourses.map((course) => (
+            <CourseCard
+              key={course._id}
+              course={course}
+              handleEdit={handleEdit}
+              handleDelete={handleDelete}
+            />
+          ))
+        ) : (
+          <div className="py-12 text-center text-gray-500">
+            <XCircle className="w-6 h-6 mx-auto mb-2 text-red-400" />
+            No courses found matching &quot;{searchTerm}&quot;.
+          </div>
+        )}
+      </div>
+
       {/* 💡 Render the Course Form Modal */}
       <CourseFormModal
         isOpen={isModalOpen}
         onClose={handleCloseModal}
-        onCourseUpdated={fetchCourses} // Pass the fetch function to refresh the list
-        initialData={editingCourse} // Pass the course data for editing
+        onCourseUpdated={fetchCourses}
+        initialData={editingCourse}
       />
     </div>
   );

@@ -1,23 +1,13 @@
 "use client";
-import { useState } from "react";
+import { useState, useEffect, useCallback } from "react"; // 💡 Import useEffect and useCallback
 import { ChevronDown, Loader2 } from "lucide-react";
 import WelcomeBanner from "../../../../components/welcome.jsx";
-
-// --- Mock Data Options (for Course, Gender, Payment) ---
+// --- Mock Data Options (Gender, Payment Type remain local) ---
 const GENDER_OPTIONS = [
   { value: "", label: "Select Gender" },
   { value: "male", label: "Male" },
   { value: "female", label: "Female" },
   { value: "other", label: "Other" },
-];
-
-const COURSE_OPTIONS = [
-  { value: "", label: "Select Course" },
-  { value: "web_dev", label: "Web Development" },
-  { value: "app_dev", label: "App Development" },
-  { value: "data_analysis", label: "Data Analysis" },
-  { value: "digital_marketing", label: "Digital Marketing" },
-  // ... add more courses based on your web79|smi offerings
 ];
 
 const PAYMENT_OPTIONS = [
@@ -28,7 +18,9 @@ const PAYMENT_OPTIONS = [
 // --- End Mock Data Options ---
 
 // Custom Select Component (Reusable)
-const FormSelect = ({ label, name, value, onChange, options }) => (
+const FormSelect = (
+  { label, name, value, onChange, options, isLoading = false } // 💡 Added isLoading prop
+) => (
   <div>
     <label htmlFor={name} className="block text-sm font-medium text-gray-700">
       {label}
@@ -40,8 +32,10 @@ const FormSelect = ({ label, name, value, onChange, options }) => (
         value={value}
         onChange={onChange}
         required
-        className="block w-full appearance-none rounded-lg border border-gray-300 bg-white py-2 pl-3 pr-10 text-base text-gray-900 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+        disabled={isLoading} // Disable while loading
+        className="block w-full appearance-none rounded-lg border border-gray-300 bg-white py-2 pl-3 pr-10 text-base text-gray-900 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm disabled:bg-gray-50 disabled:text-gray-500"
       >
+        {isLoading && <option value="">Loading {label}...</option>}
         {options.map((option) => (
           <option
             key={option.value}
@@ -97,14 +91,52 @@ const initialFormData = {
   gender: "",
   course: "",
   paymentType: "",
-  amountAgreed: 0, // New field for payment tracking
-  firstPayment: 0, // New field for payment tracking
+  amountAgreed: 0,
+  firstPayment: 0,
 };
 
 export default function RegisterStudentPage() {
   const [formData, setFormData] = useState(initialFormData);
   const [loading, setLoading] = useState(false);
   const [statusMessage, setStatusMessage] = useState({ type: "", text: "" });
+
+  // 💡 NEW STATES for course data
+  const [availableCourses, setAvailableCourses] = useState([]);
+  const [coursesLoading, setCoursesLoading] = useState(true);
+
+  // 💡 FUNCTION to fetch courses from API
+  const fetchCourses = useCallback(async () => {
+    setCoursesLoading(true);
+    try {
+      const response = await fetch("/api/courses");
+      if (response.ok) {
+        const data = await response.json();
+        // Map data to { value: courseName, label: courseName } format
+        const options = data.map((course) => ({
+          value: course.name,
+          label: `${course.name} (${course.duration})`,
+        }));
+        // Prepend the default "Select Course" option
+        setAvailableCourses([
+          { value: "", label: "Select Course" },
+          ...options,
+        ]);
+      } else {
+        console.error("Failed to fetch course options:", response.status);
+        setAvailableCourses([{ value: "", label: "Failed to load courses" }]);
+      }
+    } catch (error) {
+      console.error("Network error fetching courses:", error);
+      setAvailableCourses([{ value: "", label: "Network Error" }]);
+    } finally {
+      setCoursesLoading(false);
+    }
+  }, []);
+
+  // 💡 FETCH courses on initial load
+  useEffect(() => {
+    fetchCourses();
+  }, [fetchCourses]);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -216,12 +248,15 @@ export default function RegisterStudentPage() {
               onChange={handleChange}
               placeholder="e.g., 080XXXXXXXX"
             />
+
+            {/* 💡 DYNAMIC COURSE SELECTION */}
             <FormSelect
               label="Course"
               name="course"
               value={formData.course}
               onChange={handleChange}
-              options={COURSE_OPTIONS}
+              options={availableCourses}
+              isLoading={coursesLoading} // Pass loading state
             />
           </div>
 
@@ -253,15 +288,16 @@ export default function RegisterStudentPage() {
               label="Amount Agreed (NGN)"
               name="amountAgreed"
               type="number"
-              value={formData.amountAgreed || ""} // Use empty string for better UX with number fields
+              value={formData.amountAgreed || ""}
               onChange={handleChange}
               placeholder="e.g., 50000"
             />
+            {/* NOTE: Changed name from amountPaid back to firstPayment to match Mongoose Model */}
             <FormInput
               label="Amount Paid (NGN)"
-              name="amountPaid"
+              name="firstPayment"
               type="number"
-              value={formData.amountPaid || ""} // Use empty string for better UX with number fields
+              value={formData.firstPayment || ""}
               onChange={handleChange}
               placeholder="e.g., 20000"
             />
