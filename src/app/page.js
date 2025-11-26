@@ -2,7 +2,9 @@
 import { useEffect, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
+// Ensure CustomSelect is available in components/
 import CustomSelect from "../../components/customSelect";
+import { useRouter } from "next/navigation";
 
 const branches = [
   { value: "ibadan", label: "Ibadan" },
@@ -11,12 +13,18 @@ const branches = [
 ];
 
 export default function Home() {
+  const router = useRouter(); // 💡 INITIALIZE THE ROUTER
+
   // Array of banner images for the form card
   const banners = ["/business.jpg", "/oracle.jpg", "/flyer.jpg"];
   const [currentBanner, setCurrentBanner] = useState(0);
 
-  // Form state
+  // 💡 FORM STATE FOR LOGIN
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
   const [selectedBranch, setSelectedBranch] = useState(branches[0].value);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
 
   // Rotate banner every 4s
   useEffect(() => {
@@ -26,9 +34,48 @@ export default function Home() {
     return () => clearInterval(interval);
   }, [banners.length]);
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    console.log("Selected Branch:", selectedBranch);
+    setLoading(true);
+    setError(null);
+
+    try {
+      const response = await fetch("/api/auth/login", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          email,
+          password,
+          branch: selectedBranch,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        // 1. Store the token for future authenticated requests
+        localStorage.setItem("authToken", data.token);
+        // 2. Store user info (optional, but useful for dashboard)
+        localStorage.setItem("user", JSON.stringify(data.user));
+
+        console.log("Login Successful, Token Stored:", data.token);
+
+        // 3. Redirect to the admin dashboard
+        router.push("/admin");
+      } else {
+        // Login failed (e.g., 401 Invalid credentials)
+        setError(
+          data.message || "Login failed. Please check your credentials."
+        );
+      }
+    } catch (apiError) {
+      console.error("API Error during login:", apiError);
+      setError("Network error. Please try again later.");
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -39,7 +86,7 @@ export default function Home() {
       {/* Overlay */}
       <div className="fixed inset-0 bg-black/60 z-0"></div>
 
-      {/* Header */}
+      {/* Header (Keep original structure) */}
       <header className="relative z-10 flex flex-wrap justify-between items-center px-4 sm:px-6 py-3 bg-[#0A1B2A]/80 border-b border-gray-700">
         <div className="flex items-center space-x-2 sm:space-x-3">
           <Image
@@ -89,15 +136,28 @@ export default function Home() {
             onSubmit={handleSubmit}
             className="space-y-4 p-4 sm:p-6 md:p-8 mt-6"
           >
+            {/* 💡 Error Message Display */}
+            {error && (
+              <div className="p-3 bg-red-800 text-white rounded-lg text-sm font-medium">
+                {error}
+              </div>
+            )}
+
             <input
-              type="text"
-              placeholder="Enter Your FullName"
+              type="email" // Changed type to email to match backend
+              placeholder="Enter Your Email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              required
               className="w-full p-3 text-sm sm:text-base rounded-lg bg-white/10 text-white placeholder-gray-300 focus:outline-none focus:ring-2 focus:ring-green-500"
             />
 
             <input
               type="password"
               placeholder="Enter Your Password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              required
               className="w-full p-3 text-sm sm:text-base rounded-lg bg-white/10 text-white placeholder-gray-300 focus:outline-none focus:ring-2 focus:ring-green-500"
             />
 
@@ -111,9 +171,10 @@ export default function Home() {
 
             <button
               type="submit"
-              className="w-full py-3 bg-green-600 hover:bg-green-700 text-white font-bold rounded-lg shadow-md transition"
+              disabled={loading}
+              className="w-full py-3 bg-green-600 hover:bg-green-700 text-white font-bold rounded-lg shadow-md transition disabled:bg-green-400"
             >
-              LOGIN
+              {loading ? "LOGGING IN..." : "LOGIN"}
             </button>
           </form>
         </div>
