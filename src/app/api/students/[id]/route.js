@@ -38,7 +38,7 @@ const authorizeSuperAdmin = (request) => {
 // ------------------------------------
 export async function GET(request, { params }) {
   await dbConnect();
-  const { id } = params;
+  const { id } = await params;
 
   try {
     const student = await Student.findById(id);
@@ -109,7 +109,7 @@ export async function PATCH(request, { params }) {
 // ------------------------------------
 export async function DELETE(request, { params }) {
   await dbConnect();
-  const { id } = params;
+  const { id } = await params;
 
   // 1. 💡 AUTHORIZATION CHECK
   const authResult = authorizeSuperAdmin(request);

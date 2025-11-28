@@ -7,7 +7,7 @@ import Course from "../../../../../models/Courses.js";
 // ------------------------------------
 export async function GET(request, { params }) {
   await dbConnect();
-  const { id } = params;
+  const { id } = await params;
 
   try {
     const course = await Course.findById(id);
@@ -34,7 +34,7 @@ export async function GET(request, { params }) {
 // ------------------------------------
 export async function PATCH(request, { params }) {
   await dbConnect();
-  const { id } = params;
+  const { id } = await params;
 
   try {
     const updateData = await request.json();
@@ -69,7 +69,7 @@ export async function PATCH(request, { params }) {
 // ------------------------------------
 export async function DELETE(request, { params }) {
   await dbConnect();
-  const { id } = params;
+  const { id } = await params;
 
   try {
     const deletedCourse = await Course.findByIdAndDelete(id);

@@ -88,7 +88,6 @@ export default function CreateAdminModal({ isOpen, onClose }) {
   const [loading, setLoading] = useState(false);
   const [statusMessage, setStatusMessage] = useState({ type: "", text: "" });
 
-  // Exit immediately if the modal is not open
   if (!isOpen) return null;
 
   const handleChange = (e) => {
@@ -101,10 +100,8 @@ export default function CreateAdminModal({ isOpen, onClose }) {
     setLoading(true);
     setStatusMessage({ type: "", text: "" });
 
-    // 1. 💡 Retrieve the JWT token from local storage
     const token = localStorage.getItem("authToken");
 
-    // Safety check: if no token exists, warn the user and stop
     if (!token) {
       setStatusMessage({
         type: "error",
@@ -119,19 +116,16 @@ export default function CreateAdminModal({ isOpen, onClose }) {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          // 2. 💡 Attach the Authorization header
           Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify(formData),
       });
 
-      // Check 1: If the response is not 2xx, read the error message.
       if (!response.ok) {
         let errorMessage = "Failed to create user. Check server logs.";
 
         try {
           const errorData = await response.json();
-          // The backend sends 'Forbidden: Only Super Admin can create accounts.' for 403 status
           errorMessage = errorData.message || errorMessage;
         } catch {
           errorMessage = `Server Error (${response.status}).`;
@@ -142,15 +136,12 @@ export default function CreateAdminModal({ isOpen, onClose }) {
         return;
       }
 
-      // Check 2: Only proceed to parse as JSON if response.ok is true
       const data = await response.json();
 
-      // Original success logic
       setStatusMessage({
         type: "success",
         text: `Successfully created user: ${data.user.fullName} with role ${data.user.role}.`,
       });
-      // Reset form fields
       setFormData({
         fullName: "",
         email: "",
@@ -161,7 +152,6 @@ export default function CreateAdminModal({ isOpen, onClose }) {
       setTimeout(onClose, 2000);
     } catch (error) {
       console.error("Submission Error:", error);
-      // This catch block handles network errors or unexpected parse errors
       setStatusMessage({
         type: "error",
         text: "An unexpected network error occurred or server did not respond.",

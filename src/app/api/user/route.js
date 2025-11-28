@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import dbConnect from "../../../../lib/mongodb.js";
 import User from "../../../../models/User.js";
+import jwt from "jsonwebtoken";
 
 /**
  * Helper function to extract and verify the user role from the JWT token.
